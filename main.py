@@ -22,8 +22,37 @@ from collections import Counter
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+# Import necessary functions and classes
+from formula_discovery.agents import FormulaDiscovererNN, GPTGuidedMCTSAgent, \
+                                    GenerativeFlowNetworkAgent, DeepSymbolicRegressionAgent, \
+                                    EnsembleAgent
+from formula_discovery.data_generation import generate_data
+from formula_discovery.models import FormulaGenerator, train 
+from formula_discovery.evaluation import validate_formula, predict_formula  # Import from evaluation.py
+from formula_discovery.utils import APDataset  
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s:%(message)s')
+
+# Set device
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# Define symbolic variables
+a1, an, ak, n, d, k, Sn = sp.symbols('a1 an ak n d k Sn')
+
+# Key AP formulas
+AP_FORMULAS = [
+    sp.Eq(an, a1 + (n - 1) * d),  # an = a1 + (n-1)d
+    sp.Eq(Sn, (n / 2) * (2 * a1 + (n - 1) * d)),  # Sn = n/2(2a1 + (n-1)d)
+    sp.Eq(Sn, (n / 2) * (a1 + an)),  # Sn = n/2(a1 + an)
+    sp.Eq(ak, a1 + (k - 1) * d),  # ak = a1 + (k-1)d
+    sp.Eq(an, (Sn - (n / 2) * a1) * 2 / n),  # Rearranged sum formula
+    sp.Eq(n, (an - a1) / d + 1),  # Rearranged an formula for n
+    sp.Eq(Sn, n * (a1 + an) / 2),  # Sum formula using a1 and an
+    sp.Eq(Sn, n * (2 * a1 + (n - 1) * d) / 2),  # Sum formula using a1, n, and d
+    sp.Eq(ak, (2 * a1 + (k - 1) * d) / 2),  # Midterm formula using a1, k, and d
+    sp.Eq(ak, a1 + (k - 1) * (an - a1) / (n - 1)),  # Midterm formula using a1, an, k, and n
+]
 
 def main_training_pipeline():
     """Main training pipeline for the Advanced Mathematical Formula Discoverer."""
@@ -207,9 +236,11 @@ def main_pipeline():
     logging.info("Results saved to formula_discoverer_results.json")
 
 if __name__ == "__main__":
-    training_mode = True  # Or use command-line arguments
+    parser = argparse.ArgumentParser(description="Advanced Mathematical Formula Discoverer")
+    parser.add_argument("--train", action="store_true", help="Run the training pipeline")
+    args = parser.parse_args()
 
-    if training_mode:
+    if args.train:
         main_training_pipeline()
     else:
         main_pipeline()
